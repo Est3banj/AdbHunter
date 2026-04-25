@@ -15,6 +15,10 @@ from src.core.watcher import Watcher
 from src.config.settings import get_full_whitelist, is_whitelisted, load_config, can_uninstall, log_uninstall, add_to_user_whitelist, remove_from_user_whitelist
 
 
+# Constantes
+MAX_LOG_ENTRIES = 50
+
+
 class AdbHunterApp(ctk.CTk):
     def __init__(self):
         super().__init__()
@@ -120,18 +124,34 @@ class AdbHunterApp(ctk.CTk):
         else:
             self.btn_wl.configure(text="+ WHITELIST", state="normal")
         
-        # Log
+        # Log con límite para evitar overflow
+        self._add_log(act.package_id)
+        
+        if self.watcher:
+            self.status.configure(text=f"Polls: {self.watcher.state.poll_count}")
+    
+    def _add_log(self, package_id: str):
+        """Agrega entrada al log con límite de entradas"""
+        from datetime import datetime
+        
+        # Limpiar si llegó al límite
+        children = self.log_frame.winfo_children()
+        if len(children) >= MAX_LOG_ENTRIES:
+            # Eliminar las más viejas (están al principio)
+            for i in range(min(10, len(children) // 2)):
+                try:
+                    children[i].destroy()
+                except:
+                    pass
+        
         ts = datetime.now().strftime("%H:%M:%S")
-        color = "red" if not is_whitelisted(act.package_id) else "green"
+        color = "red" if not is_whitelisted(package_id) else "green"
         
         row = ctk.CTkFrame(self.log_frame, fg_color="transparent")
         row.pack(fill="x", pady=1)
         
         ctk.CTkLabel(row, text=f"[{ts}]", width=8).pack(side="left", padx=5)
-        ctk.CTkLabel(row, text=act.package_id, text_color=color).pack(side="left")
-        
-        if self.watcher:
-            self.status.configure(text=f"Polls: {self.watcher.state.poll_count}")
+        ctk.CTkLabel(row, text=package_id, text_color=color).pack(side="left")
     
     def _force_stop(self):
         if not self.selected_package:
