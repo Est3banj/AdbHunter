@@ -10,7 +10,8 @@ from dataclasses import dataclass, field
 from typing import Optional, Callable, List
 from datetime import datetime
 
-from core.adb import (
+# Import relativo para módulos del mismo paquete
+from .adb import (
     get_connected_device,
     get_foreground_activity,
     Device,

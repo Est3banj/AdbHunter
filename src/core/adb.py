@@ -129,7 +129,7 @@ def get_foreground_activity(device_serial: str) -> Optional[ForegroundActivity]:
     """
     cmd = [
         "adb", "-s", device_serial,
-        "shell", "dumpsys", "window", "windows"
+        "shell", "dumpsys", "window"
     ]
     
     try:
@@ -143,12 +143,12 @@ def get_foreground_activity(device_serial: str) -> Optional[ForegroundActivity]:
         if result.returncode != 0:
             return None
         
-        # Buscar mCurrentFocus - tiene el formato:
-        # mCurrentFocus=Window{... u0 com.example.app/.MainActivity ...}
+        # Buscar mCurrentFocus - formato nuevo:
+        # mCurrentFocus=Window{... u0 com.example.app/.MainActivity}
         for line in result.stdout.split("\n"):
             if "mCurrentFocus=" in line:
-                # Extraer después de "u0 " hasta el "/"
-                match = re.search(r'u0\s+([a-zA-Z0-9_.]+)/', line)
+                # Extraer después de "u0 " hasta el "}" (fin de la ruta)
+                match = re.search(r'u0\s+([a-zA-Z0-9_.]+/[a-zA-Z0-9_.]+)', line)
                 if match:
                     full_name = match.group(1)
                     # Parsear "com.package/ClassName" -> package_id, activity_class
