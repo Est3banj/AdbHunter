@@ -40,6 +40,9 @@ class AdbHunterApp(ctk.CTk):
         
         ctk.CTkLabel(header, text="AdbHunter", font=("Arial", 18, "bold")).pack(side="left", padx=20, pady=5)
         
+        # Botón Info
+        ctk.CTkButton(header, text="ⓘ", width=30, command=self._show_info).pack(side="right", padx=(0, 10))
+        
         self.status = ctk.CTkLabel(header, text="Checking...")
         self.status.pack(side="right", padx=20, pady=5)
         
@@ -203,6 +206,24 @@ class AdbHunterApp(ctk.CTk):
         save_config(self.config)
         if self.watcher:
             self.watcher.poll_interval = v
+    
+    def _show_info(self):
+        """Muestra info del desarrollador"""
+        info = """AdbHunter v1.0
+
+Desarrollado por @Est3banj
+
+GitHub: github.com/esteban
+Telegram: t.me/Est3banj
+
+Herramienta para detectar y eliminar
+apps maliciosas en Android vía ADB.
+
+⚠️ Usar con responsabilidad."""
+        
+        import tkinter as tk
+        from tkinter import messagebox
+        messagebox.showinfo("AdbHunter", info)
 
 
 def main():

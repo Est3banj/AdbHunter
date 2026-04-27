@@ -1,1 +1,8 @@
+# GUI
 customtkinter>=5.2.0
+
+# Firebase (validación de licencias)
+firebase-admin>=6.0.0
+
+# Packaging (para crear .exe)
+pyinstaller>=6.0.0
