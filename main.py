@@ -12,16 +12,51 @@ import logging
 
 # Silenciar warnings de grpc (ev_poll_posix)
 os.environ['GRPC_VERBOSITY'] = 'ERROR'
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s: %(message)s')
 logging.getLogger('grpc').setLevel(logging.ERROR)
 
-script_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, script_dir)
+# Log to file for debugging
+log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "adbhunter.log") if not hasattr(sys, '_MEIPASS') else os.path.join(os.path.dirname(sys.executable), "adbhunter.log")
+try:
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s: %(message)s'))
+    logging.getLogger().addHandler(file_handler)
+except:
+    pass
 
-from src.core.adb import is_adb_installed, get_connected_device, force_stop_package, uninstall_package, enable_wireless_debugging, disconnect_wireless, scan_wireless_devices, pair_wireless
-from src.core.watcher import Watcher
-from src.config.settings import get_full_whitelist, is_whitelisted, load_config, add_to_user_whitelist, remove_from_user_whitelist
+logging.info("AdbHunter starting...")
 
-# ========== LICENCIA SYSTEM ==========
+# ========== PATH RESOLUTION ==========
+def get_resource_path(relative_path):
+    """Get path to resource, works for dev and for PyInstaller"""
+    if hasattr(sys, '_MEIPASS'):
+        # Running as bundled app
+        base_path = sys._MEIPASS
+    else:
+        # Running in development
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, relative_path)
+
+# Set up paths for imports and resources
+if hasattr(sys, '_MEIPASS'):
+    # Bundled app - modules are in the zip
+    sys.path.insert(0, sys._MEIPASS)
+else:
+    # Development
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    sys.path.insert(0, script_dir)
+
+# Core imports - needed for both license check and UI
+try:
+    from src.core.adb import is_adb_installed, get_connected_device, force_stop_package, uninstall_package, enable_wireless_debugging, disconnect_wireless, scan_wireless_devices, pair_wireless
+    from src.core.watcher import Watcher
+    from src.config.settings import get_full_whitelist, is_whitelisted, load_config, add_to_user_whitelist, remove_from_user_whitelist
+    logging.info("Imports successful!")
+except Exception as e:
+    logging.error(f"Import error: {e}")
+    raise
+
+# ========== FIREBASE CONFIG ==========
 FIREBASE_AVAILABLE = False
 try:
     import firebase_admin
@@ -30,7 +65,7 @@ try:
 except ImportError:
     pass
 
-FIREBASE_CREDS = os.path.join(script_dir, "firebase-creds.json")
+FIREBASE_CREDS = get_resource_path("firebase-creds.json")
 
 def init_firebase():
     if not FIREBASE_AVAILABLE:
@@ -46,9 +81,15 @@ def init_firebase():
 LICENSE_FILE = "license.dat"
 
 def get_license_path():
+    """Get persistent license path - works in dev and bundled app"""
     if getattr(sys, 'frozen', False):
-        return os.path.join(os.path.dirname(sys.executable), LICENSE_FILE)
-    return os.path.join(script_dir, LICENSE_FILE)
+        # Bundled app - use Application Support
+        app_support = os.path.expanduser("~/Library/Application Support/AdbHunter")
+        os.makedirs(app_support, exist_ok=True)
+        return os.path.join(app_support, "license.dat")
+    else:
+        # Development
+        return os.path.join(os.path.dirname(os.path.abspath(__file__)), "license.dat")
 
 def validate_license(key):
     try:
@@ -84,11 +125,14 @@ def validate_license(key):
                 dias_restantes = (expiry - hoy).days
                 return True, f"Válida. Días restantes: {dias_restantes}"
             else:
-                # Firebase no disponible - modo demo
-                return True, "Modo demo (sin conexión)"
+                # Firebase no inicializado - licencia inválida
+                return False, "Firebase no configurado"
+        except ConnectionError as e:
+            # Error de conexión - modo demo
+            return True, f"Modo demo (sin conexión)"
         except Exception as e:
-            # Error cualquier modo demo
-            return True, f"Modo demo: {str(e)[:30]}"
+            # Otros errores - licencia inválida
+            return False, f"Error: {str(e)[:40]}"
         
     except Exception as e:
         return False, f"Error: {str(e)}"
@@ -133,6 +177,17 @@ class AppLicencia:
         self.root.title("AdbHunter - Activar")
         self.root.geometry("400x250")
         
+        # Icono (Windows)
+        if sys.platform == "win32":
+            try:
+                if hasattr(sys, '_MEIPASS'):
+                    ico_path = os.path.join(sys._MEIPASS, "AdbHunter.ico")
+                else:
+                    ico_path = "AdbHunter.ico"
+                self.root.iconbitmap(ico_path)
+            except:
+                pass
+        
         key_guardada, _ = load_saved_license()
         msg = "Tu licencia expiró. Ingresa nueva." if key_guardada else "Ingresa tu licencia"
         
@@ -169,6 +224,19 @@ class AppPrincipal:
         self.root = tk.Tk()
         self.root.title("AdbHunter - Virus Hunter")
         self.root.geometry("650x480")
+        
+        # Icono de la ventana
+        if sys.platform == "win32":
+            try:
+                if hasattr(sys, '_MEIPASS'):
+                    # Compilado - buscar en el bundle
+                    ico_path = os.path.join(sys._MEIPASS, "AdbHunter.ico")
+                else:
+                    # Desarrollo
+                    ico_path = "AdbHunter.ico"
+                self.root.iconbitmap(ico_path)
+            except:
+                pass
         
         if sys.platform == "darwin":
             self.root.bind_class("Button", "<FocusIn>", block_focus)
@@ -258,6 +326,7 @@ class AppPrincipal:
 
     def _start(self):
         d = get_connected_device()
+        
         if not d:
             messagebox.showwarning("Atencion", "No hay equipo conectado")
             return
@@ -405,18 +474,20 @@ apps maliciosas en Android vía ADB.
     
     def _enable_wifi(self):
         """Dialog para conectar via Wireless Debugging"""
-        # Ver si ya hay device wireless conectado
+        # Ver si ya hay device USB conectado
         d = get_connected_device()
         
         if d:
-            # Ya hay conexión -> ofrecer habilitar más
+            # Ya hay conexión USB -> ofrecer habilitar wireless
             ok, msg = enable_wireless_debugging(d.serial)
             if ok:
                 messagebox.showinfo("WiFi", msg)
             else:
                 messagebox.showerror("Error", msg)
+            # Update status
+            self._check()
         else:
-            # Dialog simple para IP:puerto y código
+            # NO hay conexión -> abrir dialog para WiFi pairing
             dialog = tk.Toplevel(self.root)
             dialog.title("WiFi Pairing")
             dialog.geometry("350x200")
@@ -428,7 +499,7 @@ apps maliciosas en Android vía ADB.
             entry_ip = tk.Entry(dialog, width=35)
             entry_ip.pack(padx=20, pady=5)
             
-            tk.Label(dialog, text="Código de pairing:").pack(anchor="w", padx=20)
+            tk.Label(dialog, text="Codigo de pairing:").pack(anchor="w", padx=20)
             entry_code = tk.Entry(dialog, width=35)
             entry_code.pack(padx=20, pady=5)
             
@@ -448,18 +519,11 @@ apps maliciosas en Android vía ADB.
                 else:
                     messagebox.showerror("Error", msg)
             
+            def do_cancel():
+                dialog.destroy()
+            
             tk.Button(dialog, text="Vincular", command=do_pair, bg="#00C853", fg="white").pack(pady=15)
-            tk.Button(dialog, text="Cancelar", command=dialog.destroy).pack()
-
-        d = get_connected_device()
-        if d:
-            self.status.config(text=f"Conectado: {d.serial[:15]}", fg="#00C853")
-            self.btn.config(state="normal", bg="#00C853")
-            messagebox.showinfo("OK", f"Listo:\n{d.serial[:20]}")
-        else:
-            self.status.config(text="Sin equipo conectado", fg="#D50000")
-            self.btn.config(state="disabled", bg="gray")
-            messagebox.showwarning("Atencion", "No hay equipo")
+            tk.Button(dialog, text="Cancelar", command=do_cancel).pack()
 
 
 if __name__ == "__main__":

@@ -10,14 +10,24 @@ from dataclasses import dataclass, field
 from typing import Optional, Callable, List
 from datetime import datetime
 
-# Import relativo para módulos del mismo paquete
-from .adb import (
-    get_connected_device,
-    get_foreground_activity,
-    Device,
-    ForegroundActivity,
-    DeviceStatus
-)
+# Import absoluto para que funcione con PyInstaller
+try:
+    from src.core.adb import (
+        get_connected_device,
+        get_foreground_activity,
+        Device,
+        ForegroundActivity,
+        DeviceStatus
+    )
+except ImportError:
+    # Fallback para desarrollo
+    from .adb import (
+        get_connected_device,
+        get_foreground_activity,
+        Device,
+        ForegroundActivity,
+        DeviceStatus
+    )
 
 
 # ============== MODELOS ==============
@@ -53,7 +63,7 @@ class Watcher:
         
         # Callback cuando cambia la activity
         def on_change(activity):
-            print(f"Nueva app: {activity.package_id}")
+            pass  # Handle activity change here
         
         watcher.on_activity_change = on_change
         watcher.start()

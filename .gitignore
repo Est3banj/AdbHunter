@@ -1,6 +1,15 @@
 # Firebase credenciales - NO commitear
 firebase-creds.json
-*.json
+firebase-creds-*.json
+
+# Keys y config sensible
+*.key
+*.pem
+credentials.json
+
+# Log files
+*.log
+adbhunter.log
 
 # Python
 __pycache__/

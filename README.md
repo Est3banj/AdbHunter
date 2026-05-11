@@ -14,23 +14,32 @@ Detectar en tiempo real qué app está en foreground cuando aparece un anuncio/a
 - **Whitelist**: Proteger apps para que no se puedan desinstalar por accidente
 - **Refresh**: Reiniciar el escaneo desde cero
 - **Conexión WiFi**: Soporte para Wireless Debugging (sin cable USB)
-- **Sistema de licencias**: Activación online via Firebase
+- **Busca ADB automáticamente**: Detecta ADB en varias ubicaciones del sistema
+- **Rate limiting**: Máximo 3 desinstalaciones/hora por seguridad
+
+## Modo Demo (Sin Licencia)
+
+El repositorio incluye una versión gratuita que funciona sin licencia:
+- Todas las funcionalidades activas
+- Rate limit de 3 desinstalaciones/hora
+- No requiere conexión a internet
+
+**Para funcionalidad completa sin límites, se puede adquirir una licencia del desarrollador.**
 
 ## Stack Tecnológico
 
 - **Lenguaje**: Python 3
 - **GUI**: Tkinter
-- **ADB**: Platform Tools (instalado en el sistema)
-- **Licencias**: Firebase Firestore
+- **ADB**: Platform Tools (se detecta automáticamente)
 - **Compatibilidad**: macOS, Windows, Linux
 
 ## Requisitos
 
 1. Python 3.8+
-2. ADB Platform Tools en PATH
-3. Device Android con Debug USB o Wireless Debugging habilitado
+2. Device Android con Debug USB o Wireless Debugging habilitado
+3. ADB se detecta automáticamente (no requiere PATH)
 
-### Instalación de ADB
+### Instalación de ADB (si no se detecta solo)
 
 **macOS:**
 ```bash
@@ -43,10 +52,8 @@ Descargar SDK Platform Tools de https://developer.android.com/studio/releases/pl
 ## Uso
 
 ```bash
-# 1. Ejecutar
+# Ejecutar
 python main.py
-# O usando el alias
-adbhunter
 ```
 
 ## Conexión del dispositivo
@@ -82,35 +89,41 @@ adbhunter
 
 ```
 AdbHunter/
-├── main.py           # Entry point (GUI Tkinter)
-├── firebase-creds.json  # Credenciales Firebase
+├── main.py              # Entry point (GUI Tkinter)
 ├── src/
-│   ├── core/       # Lógica de ADB
-│   │   ├── adb.py  # Comandos ADB
-│   │   └── watcher.py # Loop de monitoreo
-│   ├── ui/         # Interfaz alternativa (CustomTkinter)
-│   └── config/      # Configuración
-│       └── settings.py
+│   ├── core/
+│   │   ├── adb.py       # Comandos ADB + detección automática
+│   │   └── watcher.py   # Loop de monitoreo
+│   ├── ui/              # Interfaz alternativa
+│   └── config/
+│       └── settings.py  # Configuración
 ├── requirements.txt
 └── README.md
 ```
 
-## Cómo usar
+## Compilar ejecutable
 
-1. Ejecutá `adbhunter`
-2. Conectá tu dispositivo (USB o WiFi)
-3. Click **START** para comenzar a monitorear
-4. Cuando aparezca una app sospechosa, seleccioná del historial
-5. Elegí **FORCE STOP** (cerrar) o **DESINSTALAR** (eliminar)
+### macOS
+```bash
+pip install pyinstaller
+pyinstaller --onefile --windowed --name AdbHunter --iconfile=AdbHunter.icns main.py
+```
 
-## Licencia
+### Windows
+```bash
+pip install pyinstaller
+pyinstaller --onefile --windowed --name AdbHunter --iconfile=AdbHunter.ico main.py
+```
 
-AdbHunter requiere una licencia válida para funcionar.
+Los ejecutables se generan en la carpeta `dist/`.
 
-- **Modo demo**: Funcionalidades limitadas si no hay licencia activa
-- ** Activación**: Key en formato `ADH-YYMMDD-XXXX`
+## Licencia (Opcional)
 
-Para obtener una licencia, contactá al desarrollador.
+- **Gratis**: Todas las funcionalidades con rate limit de 3 desinstalaciones/hora
+- **Comprada**: Sin límites + soporte del desarrollador
+- **Formato de key**: `ADH-YYMMDD-XXXX`
+
+Para adquirir una licencia, contactá al desarrollador.
 
 ## Desarrollador
 
